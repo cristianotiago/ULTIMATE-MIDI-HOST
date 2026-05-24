@@ -62,3 +62,92 @@ Certifique-se de ter as seguintes bibliotecas instaladas na sua IDE:
 3. Na interface gráfica, você poderá ligar/desligar slots individuais usando os botões deslizantes (*Toggle Switches*).
 4. Altere os canais de entrada/saída, os números de CC e os ranges de valores conforme sua necessidade.
 5. Clique em **"GRAVAR
+
++---------------------------------------+
+                     |          ESP32-S3 DEV MODULE          |
+                     +---------------------------------------+
+                        |   |   |   |    |   |    |   |   |
+     +------------------+   |   |   |    |   |    |   |   +------------------+
+     |                      |   |   |    |   |    |   |                      |
++----+----+                 |   |   |    |   |    |   +----+----+        +---+---+
+| 5V  GND |                 |   |   |    |   |    |        | 3.3V|        |  5V   |
++----+----+                 |   |   |    |   |    |        +--+--+        +---+---+
+     |                      |   |   |    |   |    |           |               |
+[FONTE DE ENERGIA]          |   |   |    |   |    +-----------|-------+       |
+(GND comum para todos)      |   |   |    |   |                |       |       |
+                            |   |   |    |   +---------+      |       |       |
+    +-----------------------+   |   |    |             |      |       |       |
+    |                           |   |    |             |      |       |       |
++---+---+                       |   |    |          +--+------+--+    |       |
+| PINO  |                       |   |    |          | OLED       |    |       |
+| 18 17 |                       |   |    |          | SSD1306    |    |       |
++---+---+                       |   |    |          | SDA=41     |    |       |
+    |                           |   |    |          | SCL=42     |    |       |
+[CIRCUITO MIDI DIN]             |   |    |          +------------+    |       |
+(Optoacoplador e Jacks)         |   |    |                            |       |
+                                |   |    +--------------------+       |       |
+       +------------------------+   |                         |       |       |
+       |                            |                         |       |       |
++------+------+                     |                  +------+------+ |       |
+| PINO        |                     |                  | PINO        | |       |
+| 11  12  13  |                     |                  | A0     A1   | |       |
++------+------+                     |                  +------+------+ |       |
+       |                            |                         |        |       |
+[ENCODER ROTATIVO]                  |                  [PEDAL EXPR.1 & 2]      |
+(A, B e Botão SW)                   |                  (Potenciômetros)        |
+                                    |                                          |
+                                    +------------------------------------------+
+                                                                               |
+                                                                        [PORTA USB HOST]
+
+                                                                       📋 Lista de Conexões Pino a Pino
+
+    Display OLED (SSD1306 I2C)
+
+        VCC ➡️ 3.3V do ESP32-S3
+
+        GND ➡️ GND comum
+
+        SDA ➡️ GPIO 41
+
+        SCL ➡️ GPIO 42
+
+    Encoder Rotativo
+
+        Pino A (CLK) ➡️ GPIO 11
+
+        Pino B (DT) ➡️ GPIO 12
+
+        Botão (SW) ➡️ GPIO 13 (Utiliza o resistor interno de Pull-Up)
+
+        GND ➡️ GND comum
+
+    Conexões MIDI DIN (5 Pinos)
+
+        TX (Saída MIDI) ➡️ GPIO 17 (Via resistor de 220Ω para o pino 4 do conector)
+
+        RX (Entrada MIDI) ➡️ GPIO 18 (Vindo do pino de saída do Optoacoplador 6N138)
+
+    Pedais de Expressão Analógicos (Potenciômetros de 10kΩ)
+
+        Extremidade 1 (VCC) ➡️ 3.3V do ESP32-S3 (Nunca ligar no 5V!)
+
+        Extremidade 2 (GND) ➡️ GND comum
+
+        Cursor Central (Sinal):
+
+            Pedal 1 ➡️ Entrada Analógica ADC (Ex: GPIO 1)
+
+            Pedal 2 ➡️ Entrada Analógica ADC (Ex: GPIO 2)
+
+    Porta USB Host (Conexão OTG para Controladores)
+
+        USB D- (Fio Branco) ➡️ GPIO 19
+
+        USB D+ (Fio Verde) ➡️ GPIO 20
+
+        USB VBUS (Fio Vermelho) ➡️ Pino de 5V (V5 / Vin) para alimentar os controladores
+
+        GND (Fio Preto) ➡️ GND comum
+
+    ⚠️ IMPORTANTE: Todos os pontos de terra (GND) devem estar estritamente interconectados no mesmo barramento para evitar flutuações de sinal analógico ou loops de terra. Certifique-se de que sua fonte forneça pelo menos 1.5A a 2A para suprir os controladores USB externos conectados.
