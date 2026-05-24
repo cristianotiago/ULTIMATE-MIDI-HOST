@@ -63,7 +63,12 @@ Certifique-se de ter as seguintes bibliotecas instaladas na sua IDE:
 4. Altere os canais de entrada/saída, os números de CC e os ranges de valores conforme sua necessidade.
 5. Clique em **"GRAVAR
 
-+---------------------------------------+
+## 🛠️ Arquitetura de Hardware e Pinagem
+
+Para garantir o funcionamento correto e sem ruídos, todas as conexões devem seguir o mapeamento de pinos do ESP32-S3 detalhado abaixo:
+
+```text
+                     +---------------------------------------+
                      |          ESP32-S3 DEV MODULE          |
                      +---------------------------------------+
                         |   |   |   |    |   |    |   |   |
@@ -100,7 +105,7 @@ Certifique-se de ter as seguintes bibliotecas instaladas na sua IDE:
                                                                                |
                                                                         [PORTA USB HOST]
 
-                                                                       📋 Lista de Conexões Pino a Pino
+📋 Lista de Conexões Pino a Pino
 
     Display OLED (SSD1306 I2C)
 
