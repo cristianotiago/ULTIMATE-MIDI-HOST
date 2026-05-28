@@ -2,7 +2,7 @@
 =====================================================
 ULTIMATE MIDI HOST V5.0 - ESP32-S3 WITH WEB INTERFACE
 VERSÃO ESTÁVEL: WebServer síncrono + Web primeiro + 2 pedais de expressão
-VERSÃO PUBLICA: 1.0
+VERSÃO PUBLICA: 1.0 (CORREÇÃO DE DISPLAY PROGRAM CHANGE)
 =====================================================
 */
 
@@ -41,7 +41,6 @@ VERSÃO PUBLICA: 1.0
 
 // Instancia o transporte físico de USB Host
 USBConnection usbHost;
-
 // Servidor Web síncrono (estável com USB Host MIDI)
 WebServer server(80);
 
@@ -65,7 +64,6 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, OLED_MOSI, OLED_CLK, OLED_
 void showSplashScreen() {
   display.clearDisplay();
   display.setTextColor(SSD1306_WHITE);
-
   // Moldura externa decorativa
   display.drawRect(0, 0, 128, 64, SSD1306_WHITE);
   display.drawRect(2, 2, 124, 60, SSD1306_WHITE);
@@ -77,14 +75,13 @@ void showSplashScreen() {
 
   // Versão com linha decorativa
   display.drawLine(15, 28, 113, 28, SSD1306_WHITE);
-  display.setCursor(31, 34);  // Mudou de 46 para 31 (margens iguais de 31px)
+  display.setCursor(31, 34);
+  // Mudou de 46 para 31 (margens iguais de 31px)
   display.print("VERSION 1.0");
-
   // Barra de carregamento fictícia (só pelo visual)
   display.drawRect(24, 48, 80, 6, SSD1306_WHITE);
   display.display();
   delay(500);
-
   // Animação de preenchimento da barra de load
   for (int w = 0; w <= 76; w += 4) {
     display.fillRect(26, 50, w, 2, SSD1306_WHITE);
@@ -92,7 +89,8 @@ void showSplashScreen() {
     delay(40);  // Controla a velocidade do carregamento
   }
 
-  delay(600);  // Tempo final para o usuário ler a tela antes de liberar o MIDI
+  delay(600);
+  // Tempo final para o usuário ler a tela antes de liberar o MIDI
 }
 
 /*
@@ -105,7 +103,6 @@ ENCODER & TIMING
 #define ENCODER_BUTTON 6
 
 ESP32Encoder menuEncoder;
-
 unsigned long lastEditTime = 0;
 bool pendingSave = false;
 const unsigned long SAVE_DELAY = 2000;
@@ -125,7 +122,6 @@ PREFERENCES & STORAGE STRUCTS
 =====================================================
 */
 Preferences prefs;
-
 enum ScreenState { SCREEN_MONITOR,
                    SCREEN_MENU,
                    SCREEN_EDIT,
@@ -136,9 +132,7 @@ enum CurveType { CURVE_LIN,
                  CURVE_LOG,
                  CURVE_ALG,
                  CURVE_SCV };
-
 const char *curveNames[] = { "LIN", "LOG", "ALG", "SCV" };
-
 enum EditField { EDIT_ENABLE,
                  EDIT_IN_CH,
                  EDIT_OUT_CH,
@@ -154,7 +148,6 @@ enum ExpField { EXP1_IN,
                 EXP2_IN,
                 EXP2_OUT,
                 EXP2_CURVE };
-
 struct MidiRemap {
   bool enabled;
   byte inputChannel;
@@ -196,7 +189,6 @@ ScreenState currentScreen = SCREEN_MONITOR;
 OperationMode currentMode = MODE_REMAPPING;
 EditField currentField = EDIT_ENABLE;
 ExpField currentExpField = EXP1_IN;
-
 int selectedItem = 0;
 int menuOffset = 0;
 #define TOTAL_MENU_ITEMS 12
@@ -213,7 +205,6 @@ byte midiChannel = 0;
 int midiData1 = 0;
 int midiData2 = 0;
 long lastEncoderValue = 0;
-
 // Variáveis de remapeamento isoladas para o OLED não ser sobrescrito por ruidos do loop
 bool isRemapped = false;
 byte remapInCC = 0;
@@ -346,7 +337,6 @@ const char index_html[] PROGMEM = R"rawliteral(
             </div>`;
         }
         document.getElementById('slotsContainer').innerHTML = html;
-
         window.onload = function() {
             fetch('/api/get_config')
             .then(response => response.json())
@@ -372,7 +362,6 @@ const char index_html[] PROGMEM = R"rawliteral(
                 }
             });
         };
-
         function saveConfig() {
             let config = {
                 mode: parseInt(document.getElementById('globalMode').value),
@@ -384,7 +373,6 @@ const char index_html[] PROGMEM = R"rawliteral(
                 exp2Crv: parseInt(document.getElementById('exp2Crv').value),
                 slots: []
             };
-
             for(let i=0; i<10; i++) {
                 config.slots.push({
                     en: document.getElementById(`en_${i}`).checked,
@@ -502,10 +490,8 @@ void drawMenuScreen() {
   display.setCursor(0, 0);
   display.println("CONFIG MENU");
   display.drawLine(0, 10, 127, 10, SSD1306_WHITE);
-
   if (selectedItem < menuOffset) menuOffset = selectedItem;
   if (selectedItem >= menuOffset + 5) menuOffset = selectedItem - 4;
-
   for (int i = 0; i < 5; i++) {
     int item = menuOffset + i;
     if (item >= TOTAL_MENU_ITEMS) break;
@@ -543,10 +529,8 @@ void drawEditScreen() {
   display.print("EDIT B");
   display.println(selectedItem + 1);
   display.drawLine(0, 10, 127, 10, SSD1306_WHITE);
-
   const int visibleLines = 5;
   int scrollOffset = (currentField >= visibleLines) ? currentField - visibleLines + 1 : 0;
-
   for (int i = 0; i < visibleLines; i++) {
     int field = scrollOffset + i;
     if (field > EDIT_OUT_VALUE2) break;
@@ -676,7 +660,6 @@ void saveRemapSlots() {
   prefs.begin("midihost", false);
   prefs.putBytes("config", &remapStorage, sizeof(remapStorage));
   prefs.end();
-
   pendingSave = false;
   DBGLN("[STORAGE] CONFIG SAVED TO FLASH SUCCESSFULLY");
 }
@@ -716,13 +699,11 @@ MIDI CORE PROCESSING ENGINE
 void processControlChange(byte channel, byte cc, byte value) {
   if (currentMode == MODE_REMAPPING) {
     bool mapped = false;
-
     // 1. ANÁLISE PRIORITÁRIA: Pedais de Expressão Globais Fixos
     if (cc == exp1InputCC || cc == exp2InputCC) {
       byte outCC = (cc == exp1InputCC) ? exp1OutputCC : exp2OutputCC;
       byte outCurve = (cc == exp1InputCC) ? exp1Curve : exp2Curve;
       byte mappedValue = applyCurve(value, outCurve);
-
       MIDI_DIN.sendControlChange(outCC, mappedValue, channel);
 
       isRemapped = true;
@@ -742,7 +723,6 @@ void processControlChange(byte channel, byte cc, byte value) {
     for (int i = 0; i < 10; i++) {
       MidiRemap &slot = remapSlots[i];
       if (!slot.enabled || channel != slot.inputChannel || cc != slot.inputCC) continue;
-
       // Se for botão (Ranges de entrada iguais na Web, ex: 127 e 127)
       if (slot.inputValue1 == slot.inputValue2) {
         if (value != slot.inputValue1) continue;
@@ -752,14 +732,14 @@ void processControlChange(byte channel, byte cc, byte value) {
 
       int mappedValue;
       if (slot.inputValue1 == slot.inputValue2) {
-        mappedValue = slot.outputValue2;  // Assume diretamente a saída do botão fixo
+        mappedValue = slot.outputValue2;
+        // Assume diretamente a saída do botão fixo
       } else {
         mappedValue = map(value, slot.inputValue1, slot.inputValue2, slot.outputValue1, slot.outputValue2);
       }
       mappedValue = constrain(mappedValue, 0, 127);
 
       MIDI_DIN.sendControlChange(slot.outputCC, mappedValue, slot.outputChannel);
-
       // Trava os dados remapeados nas variáveis isoladas do OLED
       isRemapped = true;
       midiChannel = channel;
@@ -768,7 +748,6 @@ void processControlChange(byte channel, byte cc, byte value) {
       remapOutCC = slot.outputCC;
       remapOutVal = mappedValue;
       refreshNeeded = true;
-
       mapped = true;
 
       String logRemap = "[MIDI IN CC REMAP] SAIDA DIN -> Ch: " + String(channel) + " | CC: " + String(slot.outputCC) + " | Val: " + String(mappedValue);
@@ -791,7 +770,8 @@ void processControlChange(byte channel, byte cc, byte value) {
 }
 
 void processNoteMessage(bool isNoteOn, byte channel, byte note, byte velocity) {
-  isRemapped = false;  // Desativa o layout de remapeamento no OLED para mensagens Note
+  isRemapped = false;
+  // Desativa o layout de remapeamento no OLED para mensagens Note
   if (isNoteOn) {
     setOLEDMessage("NOTE ON", channel, note, velocity);
     MIDI_DIN.sendNoteOn(note, velocity, channel);
@@ -802,7 +782,8 @@ void processNoteMessage(bool isNoteOn, byte channel, byte note, byte velocity) {
 }
 
 void handleControlChange(byte channel, byte cc, byte value) {
-  if (cc == 0 || cc == 32) return;  // Filtra ruídos Bank Select comuns de pedaleiras
+  if (cc == 0 || cc == 32) return;
+  // Filtra ruídos Bank Select comuns de pedaleiras
   DBG("[MIDI IN CC BRUTO] Entrou via DIN -> Ch: ");
   DBG(channel);
   DBG(" | CC: ");
@@ -812,10 +793,18 @@ void handleControlChange(byte channel, byte cc, byte value) {
   processControlChange(channel, cc, value);
 }
 
+// =====================================================
+// CORREÇÃO: PROG CHANGE ATUALIZA O DISPLAY CORRETAMENTE
+// =====================================================
 void handleProgramChange(byte channel, byte program) {
-  isRemapped = false;
-  setOLEDMessage("P. CHANGE", channel, program, 0);
-  MIDI_DIN.sendProgramChange(program, channel);
+  isRemapped = false; // Desativa visual do remap CC
+  setOLEDMessage("P. CHANGE", channel, program, 0); // Modifica strings e seta 'refreshNeeded' para true
+  MIDI_DIN.sendProgramChange(program, channel); // Propaga a mensagem física
+  
+  // Força atualização imediata caso esteja travado no loop de refresh
+  if (currentScreen == SCREEN_MONITOR) {
+    drawMonitorScreen();
+  }
 }
 
 void handleNoteOn(byte channel, byte note, byte velocity) {
@@ -828,10 +817,10 @@ void handleNoteOff(byte channel, byte note, byte velocity) {
 
 void processUSBHostMIDI() {
   midiHandler.task();
-
   if (!midiHandler.getQueue().empty()) {
     for (const auto &ev : midiHandler.getQueue()) {
-      if (ev.statusCode == 0xF8) continue;  // Descarta relógio MIDI de sincronismo (Clock)
+      if (ev.statusCode == 0xF8) continue;
+      // Descarta relógio MIDI de sincronismo (Clock)
 
       uint8_t tipoMsg = ev.statusCode & 0xF0;
       uint8_t canal = (ev.statusCode & 0x0F) + 1;
@@ -882,7 +871,6 @@ void processEncoderRotation() {
   if (pos == lastEncoderValue) return;
   int dir = (pos > lastEncoderValue) ? 1 : -1;
   lastEncoderValue = pos;
-
   if (currentScreen == SCREEN_MONITOR) {
     currentMode = (dir > 0) ? MODE_REMAPPING : MODE_MONITOR;
     triggerEdit();
@@ -896,22 +884,29 @@ void processEncoderRotation() {
         if (dir != 0) slot.enabled = !slot.enabled;
         break;
       case EDIT_IN_CH: slot.inputChannel = constrain(slot.inputChannel + dir, 1, 16); break;
-      case EDIT_OUT_CH: slot.outputChannel = constrain(slot.outputChannel + dir, 1, 16); break;
+      case EDIT_OUT_CH: slot.outputChannel = constrain(slot.outputChannel + dir, 1, 16);
+        break;
       case EDIT_IN_CC: slot.inputCC = constrain(slot.inputCC + dir, 0, 127); break;
-      case EDIT_OUT_CC: slot.outputCC = constrain(slot.outputCC + dir, 0, 127); break;
+      case EDIT_OUT_CC: slot.outputCC = constrain(slot.outputCC + dir, 0, 127);
+        break;
       case EDIT_IN_VALUE1: slot.inputValue1 = constrain(slot.inputValue1 + dir, 0, 127); break;
-      case EDIT_OUT_VALUE1: slot.outputValue1 = constrain(slot.outputValue1 + dir, 0, 127); break;
+      case EDIT_OUT_VALUE1: slot.outputValue1 = constrain(slot.outputValue1 + dir, 0, 127);
+        break;
       case EDIT_IN_VALUE2: slot.inputValue2 = constrain(slot.inputValue2 + dir, 0, 127); break;
-      case EDIT_OUT_VALUE2: slot.outputValue2 = constrain(slot.outputValue2 + dir, 0, 127); break;
+      case EDIT_OUT_VALUE2: slot.outputValue2 = constrain(slot.outputValue2 + dir, 0, 127);
+        break;
     }
     triggerEdit();
   } else if (currentScreen == SCREEN_EXP_EDIT) {
     switch (currentExpField) {
-      case EXP1_IN: exp1InputCC = constrain(exp1InputCC + dir, 0, 127); break;
+      case EXP1_IN: exp1InputCC = constrain(exp1InputCC + dir, 0, 127);
+        break;
       case EXP1_OUT: exp1OutputCC = constrain(exp1OutputCC + dir, 0, 127); break;
-      case EXP1_CURVE: exp1Curve = constrain(exp1Curve + dir, 0, 3); break;
+      case EXP1_CURVE: exp1Curve = constrain(exp1Curve + dir, 0, 3);
+        break;
       case EXP2_IN: exp2InputCC = constrain(exp2InputCC + dir, 0, 127); break;
-      case EXP2_OUT: exp2OutputCC = constrain(exp2OutputCC + dir, 0, 127); break;
+      case EXP2_OUT: exp2OutputCC = constrain(exp2OutputCC + dir, 0, 127);
+        break;
       case EXP2_CURVE: exp2Curve = constrain(exp2Curve + dir, 0, 3); break;
     }
     triggerEdit();
@@ -922,11 +917,9 @@ void processButton() {
   static bool buttonState = HIGH;
   static unsigned long lastDebounceTime = 0;
   bool reading = digitalRead(ENCODER_BUTTON);
-
   if (reading != buttonState && (millis() - lastDebounceTime) > 50) {
     buttonState = reading;
     lastDebounceTime = millis();
-
     if (buttonState == LOW) {
       if (currentScreen == SCREEN_MONITOR) currentScreen = SCREEN_MENU;
       else if (currentScreen == SCREEN_MENU) {
@@ -968,15 +961,12 @@ void setupWebInterface() {
   WiFi.setSleep(false);
   WiFi.softAPdisconnect(true);
   delay(100);
-
   WiFi.softAPConfig(IPAddress(192, 168, 4, 1), IPAddress(192, 168, 4, 1), IPAddress(255, 255, 255, 0));
   WiFi.softAP("Ultimate_MIDI_Config", "12345678", 1, 0, 4);
   delay(500);
-
   server.on("/", HTTP_GET, []() {
     server.send_P(200, "text/html", index_html);
   });
-
   server.on("/api/get_config", HTTP_GET, []() {
     JsonDocument doc;
     doc["mode"] = (int)currentMode;
